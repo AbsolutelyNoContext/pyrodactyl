@@ -35,7 +35,7 @@ const sortFiles = (files: FileObject[]): FileObject[] => {
     return sortedFiles.filter((file, index) => index === 0 || file.name !== sortedFiles[index - 1]?.name);
 };
 
-export default () => {
+const FileManagerContainer = () => {
     const parentRef = useRef<HTMLDivElement | null>(null);
 
     const id = ServerContext.useStoreState((state) => state.server.data!.id);
@@ -86,10 +86,6 @@ export default () => {
         }
     }, [hash, pathname, directory]);
 
-    if (error) {
-        return <ServerError title={'Something went wrong.'} message={httpErrorToHuman(error)} />;
-    }
-
     const rowVirtualizer = useVirtualizer({
         // count: 10000,
         count: filesArray.length,
@@ -98,19 +94,32 @@ export default () => {
         // scrollMargin: 54,
     });
 
+    if (error) {
+        return <ServerError title={'Something went wrong.'} message={httpErrorToHuman(error)} />;
+    }
+
     return (
         <ServerContentBlock className='p-0!' title={'File Manager'} showFlashKey={'files'}>
             <div className='px-2 sm:px-14 pt-2 sm:pt-14'>
                 <ErrorBoundary>
-                    <MainPageHeader title={'Files'}>
-                        <Can action={'file.create'}>
-                            <div className='flex flex-row gap-1'>
-                                <FileManagerStatus />
-                                <NewDirectoryButton />
-                                <NewFileButton id={id} />
-                                <UploadButton />
-                            </div>
-                        </Can>
+                    <MainPageHeader
+                        direction='column'
+                        title={'Files'}
+                        titleChildren={
+                            <Can action={'file.create'}>
+                                <div className='flex flex-row gap-1'>
+                                    <FileManagerStatus />
+                                    <NewDirectoryButton />
+                                    <NewFileButton id={id} />
+                                    <UploadButton />
+                                </div>
+                            </Can>
+                        }
+                    >
+                        <p className='text-sm text-neutral-400 leading-relaxed'>
+                            Manage your server files and directories. Upload, download, edit, and organize your
+                            server&apos;s file system with our integrated file manager.
+                        </p>
                     </MainPageHeader>
                     <div className={'flex flex-wrap-reverse md:flex-nowrap mb-4'}>
                         <FileManagerBreadcrumbs
@@ -131,14 +140,10 @@ export default () => {
                         <p className={`text-sm text-zinc-400 text-center`}>This folder is empty.</p>
                     ) : (
                         <>
-                            <div ref={parentRef} style={{ height: `calc(100vh - 194px)`, overflowY: 'scroll' }}>
+                            <div ref={parentRef}>
                                 <div
                                     data-pyro-file-manager-files
-                                    style={{
-                                        background:
-                                            'radial-gradient(124.75% 124.75% at 50.01% -10.55%, rgb(16, 16, 16) 0%, rgb(4, 4, 4) 100%)',
-                                    }}
-                                    className='p-1 border-[1px] border-[#ffffff12] rounded-xl ml-14 mr-12'
+                                    className='p-1 border-[1px] border-[#ffffff12] rounded-xl sm:ml-12 sm:mr-12 mx-2 bg-[radial-gradient(124.75%_124.75%_at_50.01%_-10.55%,_rgb(16,16,16)_0%,rgb(4,4,4)_100%)]'
                                 >
                                     <div className='relative w-full h-full mb-1'>
                                         <svg
@@ -164,44 +169,22 @@ export default () => {
                                             onChange={(event) => debouncedSearchTerm(event.target.value)}
                                         />
                                     </div>
-                                    <For
-                                        each={rowVirtualizer.getVirtualItems()}
-                                        style={{
-                                            height: `${rowVirtualizer.getTotalSize()}px`,
-                                            width: '100%',
-                                            overflow: 'hidden',
-                                            borderRadius: '0.5rem',
-                                            position: 'relative',
-                                        }}
-                                        as='div'
-                                        memo
-                                    >
-                                        {(virtualItem) => {
-                                            if (filesArray[virtualItem.index] !== undefined) {
+                                    <div className='w-full overflow-hidden rounded-lg gap-0.5 flex flex-col'>
+                                        {rowVirtualizer.getVirtualItems().map((item) => {
+                                            if (filesArray[item.index] !== undefined) {
                                                 return (
-                                                    <div
-                                                        key={virtualItem.key}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: 0,
-                                                            left: 0,
-                                                            height: `${virtualItem.size}px`,
-                                                            width: '100%',
-                                                            paddingBottom: '1px',
-                                                            transform: `translateY(${virtualItem.start}px)`,
-                                                        }}
-                                                    >
+                                                    <div key={item.key} className='w-full'>
                                                         <FileObjectRow
-                                                            // @ts-ignore
-                                                            file={filesArray[virtualItem.index]}
-                                                            key={filesArray[virtualItem.index]?.name}
+                                                            // @ts-expect-error - Legacy type suppression
+                                                            file={filesArray[item.index]}
+                                                            key={filesArray[item.index]?.name}
                                                         />
                                                     </div>
                                                 );
                                             }
                                             return <></>;
-                                        }}
-                                    </For>
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                             <MassActionsBar />
@@ -212,3 +195,5 @@ export default () => {
         </ServerContentBlock>
     );
 };
+
+export default FileManagerContainer;

@@ -16,10 +16,13 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
  * @property int $id
  * @property string $uuid
  * @property bool $public
+ * @property bool $trust_alias
  * @property string $name
  * @property string|null $description
  * @property int $location_id
  * @property string $fqdn
+ * @property string|null $internal_fqdn
+ * @property bool $use_separate_fqdns
  * @property string $scheme
  * @property bool $behind_proxy
  * @property bool $maintenance_mode
@@ -76,19 +79,37 @@ class Node extends Model
         'daemonSFTP' => 'integer',
         'behind_proxy' => 'boolean',
         'public' => 'boolean',
+        'trust_alias' => 'boolean',
         'maintenance_mode' => 'boolean',
+        'use_separate_fqdns' => 'boolean',
     ];
 
     /**
      * Fields that are mass assignable.
      */
     protected $fillable = [
-        'public', 'name', 'location_id',
-        'fqdn', 'scheme', 'behind_proxy',
-        'memory', 'memory_overallocate', 'disk',
-        'disk_overallocate', 'upload_size', 'daemonBase',
-        'daemonSFTP', 'daemonListen',
-        'description', 'maintenance_mode',
+        'uuid',
+        'public',
+        'trust_alias',
+        'name',
+        'location_id',
+        'fqdn',
+        'internal_fqdn',
+        'use_separate_fqdns',
+        'scheme',
+        'behind_proxy',
+        'memory',
+        'memory_overallocate',
+        'disk',
+        'disk_overallocate',
+        'upload_size',
+        'daemonBase',
+        'daemonSFTP',
+        'daemonListen',
+        'daemon_token_id',
+        'daemon_token',
+        'description',
+        'maintenance_mode',
     ];
 
     public static array $validationRules = [
@@ -96,7 +117,10 @@ class Node extends Model
         'description' => 'string|nullable',
         'location_id' => 'required|exists:locations,id',
         'public' => 'boolean',
+        'trust_alias' => 'boolean',
         'fqdn' => 'required|string',
+        'internal_fqdn' => 'nullable|string',
+        'use_separate_fqdns' => 'sometimes|boolean',
         'scheme' => 'required',
         'behind_proxy' => 'boolean',
         'memory' => 'required|numeric|min:1',
@@ -115,6 +139,7 @@ class Node extends Model
      */
     protected $attributes = [
         'public' => true,
+        'trust_alias' => false,
         'behind_proxy' => false,
         'memory_overallocate' => 0,
         'disk_overallocate' => 0,
@@ -122,14 +147,40 @@ class Node extends Model
         'daemonSFTP' => 2022,
         'daemonListen' => 8080,
         'maintenance_mode' => false,
+        'use_separate_fqdns' => false,
     ];
 
     /**
      * Get the connection address to use when making calls to this node.
+     * This will use the internal FQDN if separate FQDNs are enabled and internal_fqdn is set,
+     * otherwise it will fall back to the regular fqdn.
      */
     public function getConnectionAddress(): string
     {
+        $fqdn = $this->getInternalFqdn();
+        return sprintf('%s://%s:%s', $this->scheme, $fqdn, $this->daemonListen);
+    }
+
+    /**
+     * Get the browser connection address for WebSocket connections.
+     * This always uses the public fqdn field.
+     */
+    public function getBrowserConnectionAddress(): string
+    {
         return sprintf('%s://%s:%s', $this->scheme, $this->fqdn, $this->daemonListen);
+    }
+
+    /**
+     * Get the appropriate FQDN for internal panel-to-Wings communication.
+     */
+    public function getInternalFqdn(): string
+    {
+        // Use internal FQDN if it's provided and not empty
+        if (!empty($this->internal_fqdn)) {
+            return $this->internal_fqdn;
+        }
+
+        return $this->fqdn;
     }
 
     /**
@@ -147,8 +198,8 @@ class Node extends Model
                 'port' => $this->daemonListen,
                 'ssl' => [
                     'enabled' => (!$this->behind_proxy && $this->scheme === 'https'),
-                    'cert' => '/etc/letsencrypt/live/' . Str::lower($this->fqdn) . '/fullchain.pem',
-                    'key' => '/etc/letsencrypt/live/' . Str::lower($this->fqdn) . '/privkey.pem',
+                    'cert' => '/etc/letsencrypt/live/' . Str::lower($this->getInternalFqdn()) . '/fullchain.pem',
+                    'key' => '/etc/letsencrypt/live/' . Str::lower($this->getInternalFqdn()) . '/privkey.pem',
                 ],
                 'upload_limit' => $this->upload_size,
             ],
@@ -157,9 +208,59 @@ class Node extends Model
                 'sftp' => [
                     'bind_port' => $this->daemonSFTP,
                 ],
+                'backups' => [
+                    'rustic' => $this->getRusticBackupConfiguration(),
+                ],
             ],
             'allowed_mounts' => $this->mounts->pluck('source')->toArray(),
             'remote' => route('index'),
+            'allowed_origins' => [
+                config('app.url'), // note: I have no idea why this wasn't included by Pterodactyl upstream, this might need to be configurable later - ellie
+            ],
+        ];
+    }
+
+    /**
+     * Get rustic backup configuration for Wings.
+     * Matches the exact structure expected by elytra rustic implementation.
+     */
+    private function getRusticBackupConfiguration(): array
+    {
+        $localConfig = config('backups.disks.rustic_local', []);
+        $s3Config = config('backups.disks.rustic_s3', []);
+
+        return [
+            // Path to rustic binary
+            'binary_path' => $localConfig['binary_path'] ?? 'rustic',
+
+            // Repository version (optional, default handled by rustic)
+            'repository_version' => $localConfig['repository_version'] ?? 2,
+
+            // Pack size configuration for performance tuning
+            'tree_pack_size_mb' => $localConfig['tree_pack_size_mb'] ?? 4,
+            'data_pack_size_mb' => $localConfig['data_pack_size_mb'] ?? 32,
+
+            // Local repository configuration
+            'local' => [
+                'enabled' => !empty($localConfig),
+                'repository_path' => $localConfig['repository_path'] ?? '/var/lib/pterodactyl/rustic-repos',
+                'use_cold_storage' => $localConfig['use_cold_storage'] ?? false,
+                'hot_repository_path' => $localConfig['hot_repository_path'] ?? '',
+            ],
+
+            // S3 repository configuration
+            's3' => [
+                'enabled' => !empty($s3Config['bucket']),
+                'endpoint' => $s3Config['endpoint'] ?? '',
+                'region' => $s3Config['region'] ?? 'us-east-1',
+                'bucket' => $s3Config['bucket'] ?? '',
+                'use_cold_storage' => $s3Config['use_cold_storage'] ?? false,
+                'hot_bucket' => $s3Config['hot_bucket'] ?? '',
+                'cold_storage_class' => $s3Config['cold_storage_class'] ?? 'GLACIER',
+                'force_path_style' => $s3Config['force_path_style'] ?? false,
+                'disable_ssl' => $s3Config['disable_ssl'] ?? false,
+                'ca_cert_path' => $s3Config['ca_cert_path'] ?? '',
+            ],
         ];
     }
 
@@ -231,6 +332,10 @@ class Node extends Model
         $memoryLimit = $this->memory * (1 + ($this->memory_overallocate / 100));
         $diskLimit = $this->disk * (1 + ($this->disk_overallocate / 100));
 
-        return ($this->sum_memory + $memory) <= $memoryLimit && ($this->sum_disk + $disk) <= $diskLimit;
+        // Calculate used resources excluding servers marked for exclusion
+        $usedMemory = $this->servers()->where('exclude_from_resource_calculation', false)->sum('memory');
+        $usedDisk = $this->servers()->where('exclude_from_resource_calculation', false)->sum('disk');
+
+        return ($usedMemory + $memory) <= $memoryLimit && ($usedDisk + $disk) <= $diskLimit;
     }
 }

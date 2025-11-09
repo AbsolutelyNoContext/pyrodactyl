@@ -44,8 +44,8 @@ class ScheduleTaskController extends ClientApiController
             throw new ServiceLimitExceededException("Schedules may not have more than $limit tasks associated with them. Creating this task would put this schedule over the limit.");
         }
 
-        if ($server->backup_limit === 0 && $request->action === 'backup') {
-            throw new HttpForbiddenException("A backup task cannot be created when the server's backup limit is set to 0.");
+        if (!$server->allowsBackups() && $request->action === 'backup') {
+            throw new HttpForbiddenException("A backup task cannot be created when backups are disabled for this server.");
         }
 
         /** @var Task|null $lastTask */
@@ -84,7 +84,7 @@ class ScheduleTaskController extends ClientApiController
 
         Activity::event('server:task.create')
             ->subject($schedule, $task)
-            ->property(['name' => $schedule->name, 'action' => $task->action, 'payload' => $task->payload])
+            ->property(['name' => $schedule->name, 'action' => $task->action])
             ->log();
 
         return $this->fractal->item($task)
@@ -104,8 +104,8 @@ class ScheduleTaskController extends ClientApiController
             throw new NotFoundHttpException();
         }
 
-        if ($server->backup_limit === 0 && $request->action === 'backup') {
-            throw new HttpForbiddenException("A backup task cannot be created when the server's backup limit is set to 0.");
+        if (!$server->allowsBackups() && $request->action === 'backup') {
+            throw new HttpForbiddenException("A backup task cannot be created when backups are disabled for this server.");
         }
 
         $this->connection->transaction(function () use ($request, $schedule, $task) {
@@ -139,7 +139,7 @@ class ScheduleTaskController extends ClientApiController
 
         Activity::event('server:task.update')
             ->subject($schedule, $task)
-            ->property(['name' => $schedule->name, 'action' => $task->action, 'payload' => $task->payload])
+            ->property(['name' => $schedule->name, 'action' => $task->action])
             ->log();
 
         return $this->fractal->item($task->refresh())
@@ -161,6 +161,10 @@ class ScheduleTaskController extends ClientApiController
 
         if (!$request->user()->can(Permission::ACTION_SCHEDULE_UPDATE, $server)) {
             throw new HttpForbiddenException('You do not have permission to perform this action.');
+        }
+
+        if ($task->is_queued || $task->is_processing) {
+            throw new HttpForbiddenException('Cannot delete a task that is currently queued or processing.');
         }
 
         $schedule->tasks()

@@ -3,9 +3,9 @@ import { Form, Formik } from 'formik';
 import { toast } from 'sonner';
 import { object, string } from 'yup';
 
+import ActionButton from '@/components/elements/ActionButton';
 import Field from '@/components/elements/Field';
 import TitledGreyBox from '@/components/elements/TitledGreyBox';
-import { Button } from '@/components/elements/button/index';
 
 import { httpErrorToHuman } from '@/api/http';
 import renameServer from '@/api/server/renameServer';
@@ -18,21 +18,23 @@ interface Values {
     description: string;
 }
 
-const RenameServerBox = () => {
+const RenameServerForm = () => {
     return (
         <TitledGreyBox title={'Server Details'}>
             <Form className='flex flex-col gap-4'>
                 <Field id={'name'} name={'name'} label={'Server Name'} type={'text'} />
                 <Field id={'description'} name={'description'} label={'Server Description'} type={'text'} />
                 <div className={`mt-6 text-right`}>
-                    <Button type={'submit'}>Save</Button>
+                    <ActionButton variant='primary' type={'submit'}>
+                        Save
+                    </ActionButton>
                 </div>
             </Form>
         </TitledGreyBox>
     );
 };
 
-export default () => {
+const RenameServerBox = () => {
     const server = ServerContext.useStoreState((state) => state.server.data!);
     const setServer = ServerContext.useStoreActions((actions) => actions.server.setServer);
     const { addError, clearFlashes } = useStoreActions((actions: Actions<ApplicationStore>) => actions.flashes);
@@ -61,7 +63,9 @@ export default () => {
                 description: string().nullable(),
             })}
         >
-            <RenameServerBox />
+            <RenameServerForm />
         </Formik>
     );
 };
+
+export default RenameServerBox;

@@ -55,6 +55,7 @@ class ServerTransformer extends BaseClientTransformer
       'description' => $server->description,
       'limits' => [
         'memory' => $server->memory,
+        'overhead_memory' => $server->overhead_memory,
         'swap' => $server->swap,
         'disk' => $server->disk,
         'io' => $server->io,
@@ -70,6 +71,7 @@ class ServerTransformer extends BaseClientTransformer
         'databases' => $server->database_limit,
         'allocations' => $server->allocation_limit,
         'backups' => $server->backup_limit,
+        'backupStorageMb' => $server->backup_storage_limit,
       ],
       'status' => $server->status,
       // This field is deprecated, please use "status".

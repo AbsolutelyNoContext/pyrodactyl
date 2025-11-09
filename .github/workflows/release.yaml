@@ -1,0 +1,36 @@
+name: Create & Build Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to create (e.g., 1.0.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: true
+        type: choice
+        options:
+          - stable
+          - prerelease
+        default: stable
+
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+jobs:
+  release:
+    name: Create Release
+    uses: ./.github/workflows/release-action.yaml
+    with:
+      version: ${{ inputs.version }}
+      release_type: ${{ inputs.release_type }}
+
+  build:
+    needs: release
+    name: Build Production Docker Images
+    uses: ./.github/workflows/prod-build.yaml
+    with:
+      tag: v${{ inputs.version }}

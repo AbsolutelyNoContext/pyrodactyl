@@ -23,45 +23,45 @@
       <div class="box-body">
       You are running Pyrodactyl panel version <code>{{ config('app.version') }}</code>.
       </div>
-      <div aria-hidden="true"
+      <!-- <div aria-hidden="true"
       style="background-color: #ffffff33; position: absolute; height: 1px; width: 100%; margin-top: 20px;"></div>
       <div class="row" style="margin-top: 20px;">
       <div class="col-md-3 col-sm-6 col-xs-12">
-        <div class="small-box bg-[#000000]">
-        <div class="inner">
-          <h3 id="cpu-load">--</h3>
-          <p>CPU Usage</p>
-        </div>
-        </div>
+      <div class="small-box bg-[#000000]">
+      <div class="inner">
+      <h3 id="cpu-load">--</h3>
+      <p>CPU Usage</p>
+      </div>
+      </div>
       </div>
       <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-[#000000]">
-        <div class="inner">
-          <h3 id="ram-usage">--</h3>
-          <p>Memory Usage</p>
-        </div>
-        </div>
+      <div class="small-box bg-[#000000]">
+      <div class="inner">
+      <h3 id="ram-usage">--</h3>
+      <p>Memory Usage</p>
+      </div>
+      </div>
       </div>
 
       <div class="col-sm-6 col-lg-3">
 
-        <div class="small-box bg-[#000000]">
-        <div class="inner items-center">
-          <h3 id="disk-usage">--</h3>
-          <p>Storage</p>
-        </div>
-        </div>
+      <div class="small-box bg-[#000000]">
+      <div class="inner items-center">
+      <h3 id="disk-usage">--</h3>
+      <p>Storage</p>
+      </div>
+      </div>
       </div>
 
       <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-[#000000]">
-        <div class="inner">
-          <h3 id="uptime">--</h3>
-          <p>System Uptime</p>
-        </div>
-        </div>
+      <div class="small-box bg-[#000000]">
+      <div class="inner">
+      <h3 id="uptime">--</h3>
+      <p>System Uptime</p>
       </div>
       </div>
+      </div> -->
+      <!-- </div> -->
     </div>
 
     </div>
@@ -72,7 +72,7 @@
         class="fa fa-fw fa-support"></i> Get Help <small>(via Discord)</small></button></a>
     </div>
     <div class="col-xs-6 col-sm-3 text-center">
-    <a href="https://github.com/pyrohost/pyrodactyl/wiki"><button class="btn btn-primary" style="width:100%;"><i
+    <a href="https://pyrodactyl.dev"><button class="btn btn-primary" style="width:100%;"><i
         class="fa fa-fw fa-link"></i> Documentation</button></a>
     </div>
     <div class="clearfix visible-xs-block">&nbsp;</div>

@@ -55,9 +55,28 @@
                         <p class="text-muted small">By setting a node to <code>private</code> you will be denying the ability to auto-deploy to this node.
                     </div>
                     <div class="form-group">
-                        <label for="pFQDN" class="form-label">FQDN</label>
-                        <input type="text" name="fqdn" id="pFQDN" class="form-control" value="{{ old('fqdn') }}"/>
-                        <p class="text-muted small">Please enter domain name (e.g <code>node.example.com</code>) to be used for connecting to the daemon. An IP address may be used <em>only</em> if you are not using SSL for this node.</p>
+                        <label for="pFQDN" class="form-label">Public FQDN</label>
+                        <input type="text" name="fqdn" id="pFQDN" class="form-control" value="{{ old('fqdn') }}" />
+                        <p class="text-muted small">
+                            Domain name that browsers will use to connect to Wings (e.g <code>wings.example.com</code>).
+                            An IP address may be used <em>only</em> if you are not using SSL for this node.
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label for="pInternalFQDN" class="form-label">
+                            Internal FQDN
+                            <strong>(Optional)</strong>
+                        </label>
+                        <input type="text" name="internal_fqdn" id="pInternalFQDN" class="form-control"
+                            value="{{ old('internal_fqdn') }}" />
+                        <p class="text-muted small">
+                            <strong>Optional:</strong>
+                            Leave blank to use the Public FQDN for panel-to-Wings communication.
+                            If specified, this internal domain name will be used for panel-to-Wings communication instead
+                            (e.g <code>wings-internal.example.com</code> or <code>10.0.0.5</code>).
+                            Useful for internal networks where the panel needs to communicate with Wings using a
+                            different address than what browsers use.
+                        </p>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Communicate Over SSL</label>
@@ -103,7 +122,7 @@
                     <div class="row">
                         <div class="form-group col-md-6">
                             <label for="pDaemonBase" class="form-label">Daemon Server File Directory</label>
-                            <input type="text" name="daemonBase" id="pDaemonBase" class="form-control" value="/var/lib/pterodactyl/volumes" />
+                            <input type="text" name="daemonBase" id="pDaemonBase" class="form-control" value="/var/lib/elytra/volumes" />
                             <p class="text-muted small">Enter the directory where server files should be stored. <strong>If you use OVH you should check your partition scheme. You may need to use <code>/home/daemon-data</code> to have enough space.</strong></p>
                         </div>
                         <div class="form-group col-md-6">
